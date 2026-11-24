@@ -46,7 +46,7 @@ export default function Home() {
   return <main className={dark ? "site dark" : "site light"}>
     <header className="topbar wrap">
       <Link className="brand" href="/" aria-label="Quiet Tunnel home"><span className="mark"><svg viewBox="0 0 40 40" aria-hidden="true"><path d="M20 2.5 35 11v18L20 37.5 5 29V11L20 2.5Z"/><path d="M13 27V16.5a7 7 0 0 1 14 0V27M17 27v-8a3 3 0 0 1 6 0v8M20 24v7"/></svg></span><span>quiet tunnel</span></Link>
-      <nav><a href="/guide">{t.nav}</a><a href="/about">{t.about}</a><a href="https://github.com/kolyased/quiet-tunnel-app" aria-label="GitHub"><Code2 size={18}/></a></nav>
+      <nav><a href="/guide">{t.nav}</a><a href="/about">{t.about}</a><a href="https://github.com/kolyased/quiet-tunnel" aria-label="GitHub"><Code2 size={18}/></a></nav>
       <div className="tools"><button className="icon-button" onClick={()=>setLang(lang === "ru" ? "en" : "ru")} aria-label={t.lang}><Globe2 size={17}/><span>{lang.toUpperCase()}</span></button><button className="icon-button" onClick={()=>setDark(!dark)} aria-label={t.theme}>{dark?<Sun size={18}/>:<Moon size={18}/>}</button></div>
     </header>
     <div className="wrap content">

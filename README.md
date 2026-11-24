@@ -47,13 +47,10 @@ cd frontend && npm ci && npm run lint && npx tsc --noEmit && npm run build
 cd ../backend && pip install -r requirements.txt && pytest
 ```
 
-
-Production site: https://quiet-tunnel.duckdns.org. The VPS keeps its existing Caddy service for TLS and routes this hostname to a dedicated Nginx container on loopback. See [deployment](docs/DEPLOYMENT.md) for operation and recovery commands.
-
 ## Limitations
 
 Real WARP registration is disabled pending a supported, permitted public API. Demo profiles cannot connect. WireGuard format compatibility does not provide AmneziaWG obfuscation; both ends require compatible server parameters. Real VPN connectivity has not been tested because no real profile is issued.
 
-Production updates/diagnostics use `scripts/update.sh`, `scripts/status.sh`, `scripts/logs.sh`, and `scripts/rollback.sh` from a Git checkout with `origin/main`. The VPS currently runs the checked source snapshot.
+Production updates/diagnostics use `scripts/update.sh`, `scripts/status.sh`, `scripts/logs.sh`, and `scripts/rollback.sh` from a Git checkout with `origin/main`. The production VPS runs the latest checked `main` checkout.
 
 See [research](docs/RESEARCH.md), [security](docs/SECURITY.md), [privacy](docs/PRIVACY.md), and [deployment](docs/DEPLOYMENT.md). License: MIT.

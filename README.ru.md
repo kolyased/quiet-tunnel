@@ -47,13 +47,10 @@ cd frontend && npm ci && npm run lint && npx tsc --noEmit && npm run build
 cd ../backend && pip install -r requirements.txt && pytest
 ```
 
-
-Рабочий сайт: https://quiet-tunnel.duckdns.org. На VPS для TLS сохранён уже работающий Caddy; он проксирует hostname на отдельный Nginx-контейнер через loopback. Команды управления и восстановления: [развёртывание](docs/DEPLOYMENT.md).
-
 ## Ограничения
 
 Реальная регистрация WARP отключена, пока не будет подтверждён поддерживаемый публичный API и разрешённость его использования. Демо-профиль не подключается к VPN. Совместимость формата WireGuard сама по себе не даёт обфускацию AmneziaWG: для неё нужны совместимые параметры на обеих сторонах. Реальное VPN-подключение не тестировалось, поскольку приложение не выдаёт рабочий профиль.
 
-Для обновления, диагностики и отката в Git checkout используйте `scripts/update.sh`, `scripts/status.sh`, `scripts/logs.sh` и `scripts/rollback.sh` с настроенным `origin/main`. Сейчас VPS работает из проверенного снимка исходников.
+Для обновления, диагностики и отката в Git checkout используйте `scripts/update.sh`, `scripts/status.sh`, `scripts/logs.sh` и `scripts/rollback.sh` с настроенным `origin/main`. Production VPS работает из текущего checkout ветки `main`.
 
 Исследование: [RESEARCH](docs/RESEARCH.md). Безопасность: [SECURITY](docs/SECURITY.md). Приватность: [PRIVACY](docs/PRIVACY.md). Развёртывание: [DEPLOYMENT](docs/DEPLOYMENT.md). Лицензия MIT.

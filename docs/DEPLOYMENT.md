@@ -16,7 +16,7 @@ Copy `.env.example` to `.env` and preserve `WARP_PROVIDER_MODE=mock` and `WARP_G
 ./scripts/rollback.sh
 ```
 
-`update.sh` and `rollback.sh` require a Git checkout with `origin/main`; the checked initial VPS deployment used a source snapshot while repository creation was blocked by GitHub write permissions. Once the public repository is available, clone it into `/opt/quiet-tunnel` to enable those Git-based update scripts. Each update records the previous commit, builds the project stack, checks the health endpoint, and restores that commit if deployment fails.
+The VPS uses a checkout of `https://github.com/kolyased/quiet-tunnel` at `/opt/quiet-tunnel`; its production `.env` is excluded from Git. `update.sh` fetches `origin/main`, records the previous commit, builds only this Compose project, checks the health endpoint, and restores that commit if deployment fails. `rollback.sh` returns to the recorded commit and rebuilds the project.
 
 Caddy's managed certificate renewal is automatic. To inspect it, use `systemctl status caddy`, `journalctl -u caddy`, and `curl -Iv https://quiet-tunnel.duckdns.org`. To diagnose the app, use the scripts above; the API health endpoint is `https://quiet-tunnel.duckdns.org/api/v1/health`.
 
