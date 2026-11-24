@@ -1,8 +1,15 @@
 from abc import ABC, abstractmethod
-from typing import Any
+
+from .models import ConnectionParameters, ProviderAvailability, RegistrationRequest
 
 
 class VPNProvider(ABC):
+    name: str
+
     @abstractmethod
-    async def register(self, public_key: str) -> dict[str, Any]:
-        """Register only a public key and return sanitized connection parameters."""
+    async def availability(self) -> ProviderAvailability:
+        """Report whether this provider can currently create profiles."""
+
+    @abstractmethod
+    async def register(self, request: RegistrationRequest) -> ConnectionParameters:
+        """Register a public key and return validated connection parameters."""

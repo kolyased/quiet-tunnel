@@ -1,5 +1,20 @@
 import { x25519 } from "@noble/curves/ed25519.js";
 
+export type ConnectionParameters = {
+  ipv4_address: string;
+  ipv6_address: string | null;
+  server_public_key: string;
+  endpoint: string;
+  port: number;
+  dns: string[];
+  mtu: number;
+  allowed_ips: string[];
+  persistent_keepalive: number | null;
+  additional_parameters: Record<string, string | number | boolean>;
+};
+
+export type AppMode = "mock" | "personal" | "disabled";
+
 const encode = (value: Uint8Array) => btoa(String.fromCharCode(...value));
 
 export function createKeyPair() {
@@ -7,6 +22,42 @@ export function createKeyPair() {
   return { privateKey, publicKey: x25519.getPublicKey(privateKey) };
 }
 
-export function buildDemoConfig(privateKey: Uint8Array, publicKey: Uint8Array, options: { name: string; format: string; platform: string; mtu: number }) {
-  return `# DEMO ONLY — NOT A WORKING VPN PROFILE\n# Quiet Tunnel / ${options.name.replace(/[\r\n]/g, " ")}\n# Format: ${options.format}; client: ${options.platform}\n# Client public key (local): ${encode(publicKey)}\n# Private key was generated locally. Server parameters below are fictional.\n\n[Interface]\nPrivateKey = ${encode(privateKey)}\nAddress = 172.16.0.2/32\nDNS = 1.1.1.1\nMTU = ${options.mtu}\n\n[Peer]\nPublicKey = ${encode(new Uint8Array(32).fill(7))}\nAllowedIPs = 0.0.0.0/0, ::/0\nEndpoint = demo.invalid:51820\nPersistentKeepalive = 25\n`;
+export function encodePublicKey(value: Uint8Array): string {
+  return encode(value);
+}
+
+function endpointHost(host: string): string {
+  return host.includes(":") && !host.startsWith("[") ? `[${host}]` : host;
+}
+
+export function buildConfig(
+  privateKey: Uint8Array,
+  parameters: ConnectionParameters,
+  options: { name: string; platform: string; mtu?: number; mode: AppMode },
+): string {
+  const name = options.name.replace(/[\r\n]/g, " ").slice(0, 48);
+  const addresses = [parameters.ipv4_address, parameters.ipv6_address].filter(Boolean).join(", ");
+  const iface = [
+    "[Interface]",
+    `# Quiet Tunnel / ${name}`,
+    `# Client: ${options.platform}`,
+    `PrivateKey = ${encode(privateKey)}`,
+    `Address = ${addresses}`,
+    `DNS = ${parameters.dns.join(", ")}`,
+    `MTU = ${options.mtu ?? parameters.mtu}`,
+  ];
+  for (const [key, value] of Object.entries(parameters.additional_parameters)) {
+    if (/^[A-Za-z][A-Za-z0-9]*$/.test(key) && !/[\r\n]/.test(String(value))) iface.push(`${key} = ${value}`);
+  }
+  const peer = [
+    "[Peer]",
+    `PublicKey = ${parameters.server_public_key}`,
+    `AllowedIPs = ${parameters.allowed_ips.join(", ")}`,
+    `Endpoint = ${endpointHost(parameters.endpoint)}:${parameters.port}`,
+  ];
+  if (parameters.persistent_keepalive !== null) peer.push(`PersistentKeepalive = ${parameters.persistent_keepalive}`);
+  const notice = options.mode === "mock"
+    ? "# MOCK ONLY — RESERVED TEST-NET PARAMETERS; THIS PROFILE CANNOT CONNECT.\n"
+    : "";
+  return `${notice}${iface.join("\n")}\n\n${peer.join("\n")}\n`;
 }

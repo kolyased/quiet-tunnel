@@ -1,12 +1,27 @@
 # Deployment
 
-The production site is served at https://quiet-tunnel.duckdns.org. On the target VPS, an existing host Caddy service owns ports 80 and 443, so it remains the TLS edge and automatically obtains/renews the Let's Encrypt certificate. A dated copy of `/etc/caddy/Caddyfile` is made before the dedicated hostname block is added and Caddy is validated and reloaded.
+Production runs at https://quiet-tunnel.duckdns.org from `/opt/quiet-tunnel`. The existing host Caddy service owns ports 80/443 and manages HTTPS. The Docker Compose project runs Next.js, FastAPI, and an isolated Nginx ingress container. Only Nginx is bound to host loopback (`127.0.0.1:18080`); frontend and backend ports are private. The user VPN traffic is never routed through this VPS.
 
-Docker Compose runs a non-root Next.js frontend and FastAPI backend on the isolated `quiet-tunnel` network. A dedicated Nginx container is the only service attached to the separate ingress bridge; it proxies `/api/` to FastAPI and other requests to Next.js. Nginx is published only at `127.0.0.1:18080`, then Caddy proxies the hostname to it. Backend and frontend ports are not published. Docker restart policies and healthchecks keep the stack running across process and host restarts.
+## Configuration
 
-## Deploy and operate
+Create a private root `.env` from `.env.example`, set:
 
-Copy `.env.example` to `.env` and preserve `WARP_PROVIDER_MODE=mock` and `WARP_GENERATION_ENABLED=false`. Protect `.env` with mode `0600`. On the production VPS:
+```dotenv
+APP_ENV=production
+APP_URL=https://quiet-tunnel.duckdns.org
+APP_MODE=disabled
+VPN_PROVIDER=cloudflare
+AUTH_PASSWORD_HASH=<output from scripts/hash_password.py>
+AUTH_SESSION_SECRET=<random value from openssl rand -hex 32>
+ALLOWED_ORIGINS=https://quiet-tunnel.duckdns.org
+LOG_LEVEL=INFO
+```
+
+Cloudflare is a no-network template, so the production mode is intentionally disabled. Until a real adapter is added and approved, do not set `APP_MODE=personal` or mock. Restrict the environment file with `chmod 600 .env`; keep it out of Git. Restart backend and frontend after auth changes. Rotating `AUTH_SESSION_SECRET` invalidates existing sessions.
+
+## Operations
+
+The deployment and rollback scripts operate only on this Compose project:
 
 ```sh
 ./scripts/deploy.sh
@@ -16,8 +31,14 @@ Copy `.env.example` to `.env` and preserve `WARP_PROVIDER_MODE=mock` and `WARP_G
 ./scripts/rollback.sh
 ```
 
-The VPS uses a checkout of `https://github.com/kolyased/quiet-tunnel` at `/opt/quiet-tunnel`; its production `.env` is excluded from Git. `update.sh` fetches `origin/main`, records the previous commit, builds only this Compose project, checks the health endpoint, and restores that commit if deployment fails. `rollback.sh` returns to the recorded commit and rebuilds the project.
+`update.sh` records the current revision, fetches `origin/main`, builds this Compose project and checks health; it restores the previous revision if checks fail. Rollback rebuilds the recorded revision. Avoid global Docker cleanup.
 
-Caddy's managed certificate renewal is automatic. To inspect it, use `systemctl status caddy`, `journalctl -u caddy`, and `curl -Iv https://quiet-tunnel.duckdns.org`. To diagnose the app, use the scripts above; the API health endpoint is `https://quiet-tunnel.duckdns.org/api/v1/health`.
+## Diagnostics
 
-Never publish the backend port, run global Docker prune/cleanup commands, or edit another site's Caddy block during Quiet Tunnel maintenance. The production service is demo-only; the API deliberately refuses real provider registration.
+- Check `./scripts/status.sh` and `./scripts/logs.sh`.
+- Public health endpoint: `https://quiet-tunnel.duckdns.org/api/v1/health`.
+- Validate host Caddy configuration before reload; do not modify other virtual hosts.
+- Verify HTTPS externally with `curl -Iv https://quiet-tunnel.duckdns.org`.
+- `GET /api/v1/capabilities` reports actual backend mode and provider availability; the application page itself requires owner login.
+
+Compose healthchecks and `restart: unless-stopped` keep services available after container or host restart. Login and generation rate counters are process-local and reset on restart. Backend has no host-published port. Do not install a VPN server or route VPN traffic through this VPS.

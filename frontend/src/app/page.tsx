@@ -1,73 +1,177 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { ArrowDownToLine, Check, ChevronDown, Code2, Globe2, KeyRound, LockKeyhole, Moon, QrCode, Shield, Sun } from "lucide-react";
+import {
+  ArrowDownToLine, Check, ChevronDown, Code2, Globe2, KeyRound, LockKeyhole,
+  LogOut, Moon, QrCode, Shield, Sun,
+} from "lucide-react";
 import QRCode from "qrcode";
-import { buildDemoConfig, createKeyPair } from "@/lib/config";
+import { buildConfig, createKeyPair, encodePublicKey, type AppMode, type ConnectionParameters } from "@/lib/config";
 
 type Platform = "Android" | "iOS" | "Windows" | "macOS" | "Linux";
-const words = {
-  ru: { nav: "Инструкция", about: "О проекте", hero: "Твой ключ. Твоё подключение.", sub: "Персональная конфигурация WireGuard. Приватный ключ создаётся в браузере и остаётся на вашем устройстве.", demo: "Демонстрационный режим", unavailable: "Регистрация Cloudflare отключена: публичная автоматизированная регистрация не подтверждена официальной документацией и условиями сервиса.", format: "Формат конфигурации", os: "Ваше устройство", name: "Название туннеля", agree: "Я принимаю условия Cloudflare и понимаю, что демонстрационная конфигурация не подключается к VPN.", terms: "Условия Cloudflare", create: "Показать пример конфигурации", demoNotice: "Это пример формата, не рабочий VPN-профиль. Параметры сервера вымышлены.", privacy: "Приватный ключ создан локально и не отправлялся на сервер.", guide: "Как подключить", download: "Скачать .conf", copy: "Копировать", copied: "Скопировано", show: "Показать конфигурацию", clear: "Удалить из страницы", features: "Приватность по умолчанию", noAccount: "Без аккаунта", open: "Открытый исходный код", local: "Ключи остаются на устройстве", footer: "Неофициальный проект. Не связан с Cloudflare, WireGuard или Amnezia.", network: "Регистрация недоступна", demoLabel: "Демо-пример", advanced: "Дополнительные настройки", mtu: "MTU", dns: "DNS", mode: "Режим адресов", termsRequired: "Подтвердите условия, чтобы продолжить", platforms: "Поддерживаемые клиенты", mock: "Создать демонстрационный пример", qr: "QR-код локально", lang: "Язык", theme: "Тема" },
-  en: { nav: "Setup guide", about: "About", hero: "Your key. Your connection.", sub: "A personal WireGuard configuration. Your private key is created in your browser and stays on your device.", demo: "Demo mode", unavailable: "Cloudflare registration is disabled: public automated registration is not confirmed by official documentation or service terms.", format: "Configuration format", os: "Your device", name: "Tunnel name", agree: "I accept Cloudflare’s terms and understand the demo configuration cannot connect to a VPN.", terms: "Cloudflare terms", create: "Preview demo configuration", demoNotice: "This is a format example, not a working VPN profile. Server parameters are fictional.", privacy: "Private key was generated locally and never sent to the server.", guide: "Setup guide", download: "Download .conf", copy: "Copy", copied: "Copied", show: "Show configuration", clear: "Clear from page", features: "Privacy by default", noAccount: "No account", open: "Open source", local: "Keys stay on your device", footer: "Unofficial project. Not affiliated with Cloudflare, WireGuard, or Amnezia.", network: "Registration unavailable", demoLabel: "Demo preview", advanced: "Advanced settings", mtu: "MTU", dns: "DNS", mode: "Address mode", termsRequired: "Accept the terms to continue", platforms: "Supported clients", mock: "Create demo preview", qr: "QR code generated locally", lang: "Language", theme: "Theme" }
+type Capabilities = { mode: AppMode; provider: string; available: boolean; real_provider: boolean; formats: string[]; notice: string | null };
+type Generated = { status: "created"; mode: AppMode; provider: string; format: string; parameters: ConnectionParameters; notice: string | null };
+
+const copy = {
+  ru: {
+    nav: "Инструкция", about: "О проекте", title: "Персональный генератор VPN-конфигураций", intro: "Закрытый инструмент подготовки конфигураций. Приватный ключ создаётся на устройстве и не отправляется backend.",
+    unavailable: "Генерация сейчас недоступна.", mock: "Тестовый провайдер", mockNotice: "Mock выдаёт фиктивные параметры из зарезервированных тестовых диапазонов. Такой профиль не подключается к VPN.",
+    personalUnavailable: "Реальный провайдер не подключён. Personal режим остаётся закрытым до появления поддерживаемого адаптера.", disabled: "Генерация выключена настройками backend.", provider: "Провайдер", format: "Формат", wireguard: "WireGuard", awg: "AmneziaWG", awgUnavailable: "Провайдер не подтверждает AmneziaWG.", platform: "Устройство", name: "Название конфигурации", advanced: "Дополнительные настройки", mtu: "MTU", consent: "Понимаю, что mock-конфигурация не подключается к интернету.", generate: "Создать конфигурацию", working: "Получение параметров…", localKey: "ПРИВАТНЫЙ КЛЮЧ ЛОКАЛЬНО", error: "Не удалось создать профиль. Повторите попытку.", result: "Параметры получены", resultNotice: "Профиль сформирован, но это не подтверждает подключение VPN.", download: "Скачать .conf", copy: "Копировать", copied: "Скопировано", show: "Показать конфигурацию", hide: "Скрыть конфигурацию", clear: "Удалить профиль", qr: "Локальный QR-код", qrWarning: "QR содержит приватный ключ. Не показывайте его посторонним.", gone: "При обновлении страницы профиль исчезнет, если вы не скачали файл.", instructions: "Инструкция", guideText: "Подключитесь в клиенте, который импортирует WireGuard .conf. Mock-профиль использовать для подключения нельзя.", privacy: "Ключ и готовая конфигурация не отправляются на сервер.", theme: "Тема", language: "Язык", footer: "Персональный инструмент. Не является продуктом Cloudflare, WireGuard или Amnezia.", logout: "Выйти", copyKey: "Скопировано", status: "Состояние генератора", features: "Работа на устройстве", soleOwner: "Один владелец", source: "Открытый исходный код", profile: "Конфигурация", terms: "Я принимаю условия Cloudflare", termsUrl: "Условия Cloudflare", reset: "Сбросить",
+  },
+  en: {
+    nav: "Guide", about: "About", title: "Personal VPN Configuration Generator", intro: "A private tool to prepare profiles. The private key is created on your device and never sent to the backend.",
+    unavailable: "Generation is currently unavailable.", mock: "Test provider", mockNotice: "Mock returns fictional parameters from reserved test ranges. This profile cannot connect to a VPN.",
+    personalUnavailable: "No real provider is connected. Personal mode stays unavailable until a supported adapter is configured.", disabled: "Generation is disabled by backend settings.", provider: "Provider", format: "Format", wireguard: "WireGuard", awg: "AmneziaWG", awgUnavailable: "Provider has not confirmed AmneziaWG support.", platform: "Device", name: "Profile name", advanced: "Advanced settings", mtu: "MTU", consent: "I understand mock profiles cannot connect to the internet.", generate: "Generate profile", working: "Getting connection parameters…", localKey: "PRIVATE KEY GENERATED LOCALLY", error: "Could not create a profile. Try again.", result: "Parameters received", resultNotice: "The profile was created; this does not confirm a VPN connection.", download: "Download .conf", copy: "Copy", copied: "Copied", show: "Show configuration", hide: "Hide configuration", clear: "Clear profile", qr: "Local QR code", qrWarning: "The QR contains your private key. Do not share it.", gone: "The profile is lost on refresh unless you download it.", instructions: "Guide", guideText: "Import a WireGuard .conf in a compatible client. Mock profiles cannot be used to connect.", privacy: "The key and completed profile are never sent to the server.", theme: "Theme", language: "Language", footer: "Personal tool. Not a Cloudflare, WireGuard, or Amnezia product.", logout: "Log out", copyKey: "Copied", status: "Generator status", features: "Runs on your device", soleOwner: "Single owner", source: "Open source", profile: "Configuration", terms: "I accept Cloudflare terms", termsUrl: "Cloudflare terms", reset: "Reset",
+  },
 };
 
 export default function Home() {
   const [lang, setLang] = useState<"ru" | "en">("ru");
   const [dark, setDark] = useState(true);
+  const [capabilities, setCapabilities] = useState<Capabilities | null>(null);
   const [format, setFormat] = useState<"wireguard" | "amneziawg">("wireguard");
   const [platform, setPlatform] = useState<Platform>("Android");
   const [accepted, setAccepted] = useState(false);
   const [expanded, setExpanded] = useState(false);
   const [result, setResult] = useState("");
   const [qr, setQr] = useState("");
-  const [copyText, setCopyText] = useState("Копировать");
-  const [name, setName] = useState("Quiet Tunnel · Demo");
+  const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [name, setName] = useState("Quiet Tunnel");
   const [mtu, setMtu] = useState(1280);
   const [advanced, setAdvanced] = useState(false);
-  const t = words[lang];
-  const config = useMemo(() => result, [result]);
+  const [copyText, setCopyText] = useState("Копировать");
+  const t = copy[lang];
+
+  useEffect(() => {
+    let active = true;
+    fetch("/api/v1/capabilities", { cache: "no-store" })
+      .then(async (response) => {
+        if (!response.ok) throw new Error("Capabilities unavailable");
+        return await response.json() as Capabilities;
+      })
+      .then((data) => { if (active) setCapabilities(data); })
+      .catch(() => { if (active) setCapabilities(null); });
+    return () => { active = false; };
+  }, []);
+
+  const canGenerate = capabilities?.available === true && capabilities.formats.includes(format);
 
   async function generate() {
-    if (!accepted) return;
-    const pair = createKeyPair();
-    const demo = buildDemoConfig(pair.privateKey, pair.publicKey, { name, format, platform, mtu });
-    setResult(demo);
-    setQr(await QRCode.toDataURL(demo, { width: 220, margin: 2, color: { dark: "#0b1018", light: "#ffffff" } }));
-    // Drop references promptly; JavaScript engines do not guarantee memory zeroization.
-    pair.privateKey.fill(0);
+    if (!canGenerate || busy || (capabilities?.mode === "mock" && !accepted)) return;
+    setBusy(true);
+    setError("");
+    setResult("");
+    setQr("");
+    let privateKey: Uint8Array | undefined;
+    try {
+      const pair = createKeyPair();
+      privateKey = pair.privateKey;
+      // Only the public key is included in this request. The private key stays in this call's browser memory.
+      const response = await fetch("/api/v1/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ public_key: encodePublicKey(pair.publicKey), format, platform: platform.toLowerCase() }),
+        cache: "no-store",
+      });
+      const payload = await response.json() as Generated | { detail?: { message?: string } };
+      if (!response.ok || !("parameters" in payload)) {
+        setError("detail" in payload ? payload.detail?.message ?? t.error : t.error);
+        return;
+      }
+      const config = buildConfig(pair.privateKey, payload.parameters, {
+        name,
+        platform,
+        mtu: advanced ? mtu : undefined,
+        mode: payload.mode,
+      });
+      setResult(config);
+      setQr(await QRCode.toDataURL(config, { width: 220, margin: 2, color: { dark: "#0b1018", light: "#ffffff" } }));
+    } catch {
+      setError(t.error);
+    } finally {
+      privateKey?.fill(0);
+      setBusy(false);
+    }
   }
+
   function download() {
-    const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([config], { type: "text/plain" })); a.download = "quiet-tunnel-demo.conf"; a.click(); URL.revokeObjectURL(a.href);
+    const url = URL.createObjectURL(new Blob([result], { type: "text/plain" }));
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `${name.replace(/[^a-zA-Z0-9_-]/g, "-").slice(0, 32) || "quiet-tunnel"}.conf`;
+    link.click();
+    URL.revokeObjectURL(url);
   }
-  async function copy() { await navigator.clipboard.writeText(config); setCopyText(t.copied); setTimeout(() => setCopyText(t.copy), 1500); }
+
+  async function copyConfig() {
+    try {
+      await navigator.clipboard.writeText(result);
+      setCopyText(t.copied);
+      window.setTimeout(() => setCopyText(t.copy), 1500);
+    } catch {
+      setError(t.error);
+    }
+  }
+
+  function clearResult() {
+    setResult("");
+    setQr("");
+    setExpanded(false);
+    setError("");
+  }
+
+  async function logout() {
+    try {
+      const response = await fetch("/api/v1/auth/logout", { method: "POST", cache: "no-store" });
+      if (response.ok) window.location.replace("/login");
+    } catch {
+      setError(t.error);
+    }
+  }
+
+  const mode = capabilities?.mode;
+  const statusMessage = !capabilities
+    ? t.unavailable
+    : mode === "mock"
+      ? t.mockNotice
+      : mode === "personal"
+        ? capabilities.notice ?? t.personalUnavailable
+        : t.disabled;
 
   return <main className={dark ? "site dark" : "site light"}>
     <header className="topbar wrap">
-      <Link className="brand" href="/" aria-label="Quiet Tunnel home"><span className="mark"><svg viewBox="0 0 40 40" aria-hidden="true"><path d="M20 2.5 35 11v18L20 37.5 5 29V11L20 2.5Z"/><path d="M13 27V16.5a7 7 0 0 1 14 0V27M17 27v-8a3 3 0 0 1 6 0v8M20 24v7"/></svg></span><span>quiet tunnel</span></Link>
-      <nav><a href="/guide">{t.nav}</a><a href="/about">{t.about}</a><a href="https://github.com/kolyased/quiet-tunnel" aria-label="GitHub"><Code2 size={18}/></a></nav>
-      <div className="tools"><button className="icon-button" onClick={()=>setLang(lang === "ru" ? "en" : "ru")} aria-label={t.lang}><Globe2 size={17}/><span>{lang.toUpperCase()}</span></button><button className="icon-button" onClick={()=>setDark(!dark)} aria-label={t.theme}>{dark?<Sun size={18}/>:<Moon size={18}/>}</button></div>
+      <Link className="brand" href="/" aria-label="Quiet Tunnel"><span className="mark"><svg viewBox="0 0 40 40" aria-hidden="true"><path d="M20 2.5 35 11v18L20 37.5 5 29V11L20 2.5Z"/><path d="M13 27V16.5a7 7 0 0 1 14 0V27M17 27v-8a3 3 0 0 1 6 0v8M20 24v7"/></svg></span><span>quiet tunnel</span></Link>
+      <nav><a href="#instructions">{t.nav}</a><a href="/about">{t.about}</a><a href="https://github.com/kolyased/quiet-tunnel" aria-label="GitHub"><Code2 size={18}/></a></nav>
+      <div className="tools"><button className="icon-button" onClick={() => setLang(lang === "ru" ? "en" : "ru")} aria-label={t.language}><Globe2 size={17}/><span>{lang.toUpperCase()}</span></button><button className="icon-button" onClick={() => setDark(!dark)} aria-label={t.theme}>{dark ? <Sun size={18}/> : <Moon size={18}/>}</button><button className="icon-button" onClick={logout} aria-label={t.logout}><LogOut size={17}/></button></div>
     </header>
     <div className="wrap content">
-      <section className="hero"><div className="eyebrow"><span className="pulse"/> PRIVACY FIRST <span className="version">v0.1</span></div><h1>{t.hero}</h1><p>{t.sub}</p></section>
-      <div className="notice"><span className="notice-icon"><Shield size={19}/></span><div><strong>{t.demo}</strong><p>{t.unavailable}</p></div><span className="demo-pill">DEMO</span></div>
+      <section className="hero"><div className="eyebrow"><span className="pulse"/> PERSONAL VPN TOOL <span className="version">v0.2.0</span></div><h1>{t.title}</h1><p>{t.intro}</p></section>
+      <div className={`notice ${mode === "mock" ? "" : "notice-muted"}`}><span className="notice-icon"><Shield size={19}/></span><div><strong>{t.status}: {mode?.toUpperCase() ?? "…"}</strong><p>{statusMessage}</p></div><span className="demo-pill">{capabilities?.provider ?? "—"}</span></div>
+
       <section className="generator" aria-labelledby="generator-title">
-        <div className="section-head"><div><span className="step">01 — CONFIGURE</span><h2 id="generator-title">{lang === "ru" ? "Создать конфигурацию" : "Create configuration"}</h2></div><span className="lock"><LockKeyhole size={15}/> LOCAL KEY</span></div>
-        <div className="field"><label>{t.format}</label><div className="choice-row"><button className={format === "wireguard"?"choice selected":"choice"} onClick={()=>setFormat("wireguard")}><span className="radio"/><span><b>WireGuard</b><small>{lang === "ru"?"Стандартный формат":"Standard format"}</small></span></button><button className={format === "amneziawg"?"choice selected":"choice"} onClick={()=>setFormat("amneziawg")}><span className="radio"/><span><b>AmneziaWG</b><small>{lang === "ru"?"Режим WireGuard без обфускации":"WireGuard mode, no obfuscation"}</small></span></button></div><p className="help">{lang === "ru"?"AmneziaWG не добавляет маскировку при подключении к обычному WireGuard-серверу.":"AmneziaWG does not add obfuscation when connecting to a standard WireGuard server."}</p></div>
-        <div className="field"><label>{t.os}</label><div className="platforms">{(["Android","iOS","Windows","macOS","Linux"] as Platform[]).map(x=><button key={x} className={platform===x?"platform active":"platform"} onClick={()=>setPlatform(x)}>{x}</button>)}</div></div>
-        <div className="field"><label htmlFor="conf-name">{t.name}</label><input id="conf-name" value={name} maxLength={48} onChange={e=>setName(e.target.value)}/></div>
-        <button className="advanced-toggle" onClick={()=>setAdvanced(!advanced)} aria-expanded={advanced}>{t.advanced}<ChevronDown size={17} className={advanced?"rotate":""}/></button>
-        {advanced&&<div className="advanced-fields"><label>{t.mtu}<input type="number" min={1280} max={1420} value={mtu} onChange={e=>setMtu(Math.min(1420,Math.max(1280,Number(e.target.value))))}/></label><span>{t.dns}: 1.1.1.1</span><span>{t.mode}: IPv4 / IPv6</span><button onClick={()=>{setName("Quiet Tunnel · Demo");setMtu(1280);setFormat("wireguard");setPlatform("Android")}}>{lang==="ru"?"Сбросить":"Reset"}</button></div>}
-        <label className="consent"><input type="checkbox" checked={accepted} onChange={e=>setAccepted(e.target.checked)}/><span>{t.agree} <a href="https://www.cloudflare.com/terms/" target="_blank" rel="noreferrer">{t.terms}</a></span></label>
-        <button className="primary" disabled={!accepted} onClick={generate}><KeyRound size={18}/>{t.mock}</button>
-        {!accepted&&<p className="consent-hint">{t.termsRequired}</p>}
+        <div className="section-head"><div><span className="step">01 — GENERATE</span><h2 id="generator-title">{t.profile}</h2></div><span className="lock"><LockKeyhole size={15}/>{t.localKey}</span></div>
+        <div className="field"><label>{t.format}</label><div className="choice-row">
+          <button className={format === "wireguard" ? "choice selected" : "choice"} onClick={() => setFormat("wireguard")}><span className="radio"/><span><b>{t.wireguard}</b><small>WireGuard .conf</small></span></button>
+          <button className={format === "amneziawg" ? "choice selected" : "choice"} disabled={!capabilities?.formats.includes("amneziawg")} onClick={() => setFormat("amneziawg")}><span className="radio"/><span><b>{t.awg}</b><small>{capabilities?.formats.includes("amneziawg") ? "Provider-supported" : t.awgUnavailable}</small></span></button>
+        </div><p className="help">{lang === "ru" ? "Параметры AmneziaWG должны поддерживаться сервером. Mock и обычный WireGuard не создают обфускацию." : "AmneziaWG parameters must be supported by the server. Mock and standard WireGuard do not provide obfuscation."}</p></div>
+        <div className="field"><label>{t.platform}</label><div className="platforms">{(["Android", "iOS", "Windows", "macOS", "Linux"] as Platform[]).map((item) => <button key={item} className={platform === item ? "platform active" : "platform"} onClick={() => setPlatform(item)}>{item}</button>)}</div></div>
+        <div className="field"><label htmlFor="profile-name">{t.name}</label><input id="profile-name" value={name} maxLength={48} onChange={(event) => setName(event.target.value)}/></div>
+        <button className="advanced-toggle" onClick={() => setAdvanced(!advanced)} aria-expanded={advanced}>{t.advanced}<ChevronDown size={17} className={advanced ? "rotate" : ""}/></button>
+        {advanced && <div className="advanced-fields"><label>{t.mtu}<input type="number" min={576} max={9000} value={mtu} onChange={(event) => setMtu(Math.min(9000, Math.max(576, Number(event.target.value))))}/></label><button onClick={() => { setName("Quiet Tunnel"); setMtu(1280); setFormat("wireguard"); setPlatform("Android"); setAccepted(false); }}>{t.reset}</button></div>}
+        {mode === "mock" && <label className="consent"><input type="checkbox" checked={accepted} onChange={(event) => setAccepted(event.target.checked)}/><span>{t.consent}</span></label>}
+        <button className="primary" disabled={!canGenerate || busy || (mode === "mock" && !accepted)} onClick={generate}><KeyRound size={18}/>{busy ? t.working : t.generate}</button>
+        {error && <p className="auth-error" role="alert">{error}</p>}
         <p className="privacy-line"><LockKeyhole size={14}/>{t.privacy}</p>
       </section>
-      {config&&<section className="result"><div className="result-top"><div><span className="step">02 — {t.demoLabel.toUpperCase()}</span><h2>{name}</h2></div><button className="icon-button" onClick={()=>{setResult("");setQr("");setExpanded(false)}} aria-label={t.clear}>×</button></div><div className="result-warning">{t.demoNotice}</div><div className="result-actions"><button onClick={download}><ArrowDownToLine size={16}/>{t.download}</button><button onClick={copy}><Check size={16}/>{copyText}</button><button onClick={()=>setExpanded(!expanded)}><KeyRound size={16}/>{expanded?(lang==="ru"?"Скрыть":"Hide"):t.show}</button><button onClick={()=>document.getElementById("instructions")?.scrollIntoView({behavior:"smooth"})}><QrCode size={16}/>{t.guide}</button></div>{expanded&&<pre className="config-text">{config}</pre>}<details className="qr"><summary><QrCode size={17}/>{t.qr}</summary>{qr&&<Image src={qr} alt="Local demo QR code" width={220} height={220} unoptimized/>}</details><p className="ephemeral">{lang==="ru"?"После перезагрузки страницы результат исчезнет, если не сохранить файл.":"The result is lost on refresh unless you save the file."}</p></section>}
-      <section className="benefits"><h2>{t.features}</h2><div className="benefit-grid"><div><LockKeyhole/><b>{t.local}</b></div><div><Code2/><b>{t.open}</b></div><div><Shield/><b>{t.noAccount}</b></div></div></section>
-      <section className="guide" id="instructions"><span className="step">03 — NEXT STEP</span><h2>{t.guide}</h2><p>{lang==="ru"?"Для реального подключения установите WireGuard или AmneziaWG из официального магазина. Демо-файл Quiet Tunnel не подключается к серверу.":"For a real connection, install WireGuard or AmneziaWG from the official store. Quiet Tunnel demo files do not connect to a server."}</p><div className="guide-links"><a href="https://www.wireguard.com/install/" target="_blank" rel="noreferrer">WireGuard ↗</a><a href="https://docs.amnezia.org/ru/documentation/amnezia-wg/" target="_blank" rel="noreferrer">AmneziaWG ↗</a></div></section>
-      <footer><Link className="brand small" href="/"><span className="mark"><svg viewBox="0 0 40 40"><path d="M20 2.5 35 11v18L20 37.5 5 29V11L20 2.5Z"/><path d="M13 27V16.5a7 7 0 0 1 14 0V27M17 27v-8a3 3 0 0 1 6 0v8M20 24v7"/></svg></span><span>quiet tunnel</span></Link><span>{t.footer}</span><span>MIT · v0.1</span></footer>
+
+      {result && <section className="result"><div className="result-top"><div><span className="step">02 — {t.result.toUpperCase()}</span><h2>{name}</h2></div><button className="icon-button" onClick={clearResult} aria-label={t.clear}>×</button></div><div className="result-warning">{mode === "mock" ? t.mockNotice : t.resultNotice}</div><div className="result-actions"><button onClick={download}><ArrowDownToLine size={16}/>{t.download}</button><button onClick={copyConfig}><Check size={16}/>{copyText}</button><button onClick={() => setExpanded(!expanded)}><KeyRound size={16}/>{expanded ? t.hide : t.show}</button><button onClick={clearResult}>{t.clear}</button></div>{expanded && <pre className="config-text">{result}</pre>}<details className="qr"><summary><QrCode size={17}/>{t.qr}</summary>{qr && <Image src={qr} alt="Local QR code containing the VPN configuration" width={220} height={220} unoptimized/>}<p className="help">{t.qrWarning}</p></details><p className="ephemeral">{t.gone}</p></section>}
+
+      <section className="benefits"><h2>{t.features}</h2><div className="benefit-grid"><div><LockKeyhole/><b>{t.localKey}</b></div><div><Code2/><b>{t.source}</b></div><div><Shield/><b>{t.soleOwner}</b></div></div></section>
+      <section className="guide" id="instructions"><span className="step">03 — NEXT STEP</span><h2>{t.instructions}</h2><p>{t.guideText}</p><div className="guide-links"><a href="https://www.wireguard.com/install/" target="_blank" rel="noreferrer">WireGuard ↗</a><a href="https://docs.amnezia.org/ru/documentation/amnezia-wg/" target="_blank" rel="noreferrer">AmneziaWG ↗</a></div></section>
+      <footer><Link className="brand small" href="/"><span className="mark"><svg viewBox="0 0 40 40"><path d="M20 2.5 35 11v18L20 37.5 5 29V11L20 2.5Z"/><path d="M13 27V16.5a7 7 0 0 1 14 0V27M17 27v-8a3 3 0 0 1 6 0v8M20 24v7"/></svg></span><span>quiet tunnel</span></Link><span>{t.footer}</span><span>MIT · v0.2.0</span></footer>
     </div>
   </main>;
 }
