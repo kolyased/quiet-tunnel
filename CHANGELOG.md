@@ -7,6 +7,7 @@
 - Documented that Cloudflare has not confirmed permission for this undocumented registration flow; production enablement remains off.
 - Isolated Playwright E2E ports from existing local services and fixed test-runner discovery of generated reports.
 - Updated provider research, environment examples, and release documentation.
+- Follow-up: include `frontend/public` in standalone containers and local production start so the noindex `robots.txt` is served.
 
 ## 0.2.0 — 2026-11-25
 

@@ -2,6 +2,12 @@ import { expect, test } from "@playwright/test";
 
 const password = "quiet-tunnel-e2e-password";
 
+test("robots.txt disallows search indexing", async ({ request }) => {
+  const response = await request.get("/robots.txt");
+  expect(response.status()).toBe(200);
+  expect(await response.text()).toContain("Disallow: /");
+});
+
 test("owner can generate and clear a mock profile without sending a private key", async ({ page }) => {
   const generationRequest = page.waitForRequest((request) => request.url().includes("/api/v1/generate") && request.method() === "POST");
   await page.goto("/");
