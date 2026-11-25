@@ -12,4 +12,6 @@ Generation flow:
 
 Provider-specific registration stays under `backend/app/providers/`. The generator service, API contract, authentication, and UI depend only on the `VPNProvider` interface and typed models. See [PROVIDER_INTEGRATION.md](PROVIDER_INTEGRATION.md).
 
-The mock provider enables end-to-end testing using reserved documentation addresses; it is intentionally nonfunctional as a VPN. The Cloudflare adapter is a documented no-network template. `APP_MODE=disabled` has no provider and refuses generation. No real provider is currently configured. The VPS hosts only site/API; user VPN packets go directly from the device to a provider endpoint.
+The mock provider enables end-to-end testing using reserved documentation addresses; it is intentionally nonfunctional as a VPN. The Cloudflare adapter contains an experimental consumer registration flow guarded by `WARP_EXPERIMENTAL_ENABLED=false` by default. It is technically reported to work, but the consumer API is undocumented and permission for independent registration automation is unconfirmed. Production remains `APP_MODE=disabled`; do not turn the flag on without written provider approval. The VPS hosts only site/API; user VPN packets go directly from the device to Cloudflare.
+
+In Docker Compose, frontend and Nginx use the `quiet` internal network. Backend is attached to `quiet` for application requests and `warp_egress` for the provider HTTPS API. Backend port 8000 has no host port mapping. The dedicated egress network is not shared with the frontend or Nginx.

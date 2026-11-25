@@ -16,6 +16,7 @@ class RegistrationRequest(BaseModel):
     public_key: str = Field(pattern=r"^[A-Za-z0-9+/]{42}[AEIMQUYcgkosw048]=$", max_length=44)
     format: Literal["wireguard", "amneziawg"] = "wireguard"
     platform: Literal["windows", "macos", "android", "ios", "linux"]
+    terms_accepted: bool = False
 
 
 class ConnectionParameters(BaseModel):

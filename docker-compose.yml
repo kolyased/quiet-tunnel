@@ -8,7 +8,7 @@ services:
     cap_drop: [ALL]
     mem_limit: 256m
     cpus: 0.50
-    networks: [quiet]
+    networks: [quiet, warp_egress]
     command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--proxy-headers", "--forwarded-allow-ips", "172.30.0.10"]
     logging: {driver: json-file, options: {max-size: "5m", max-file: "3"}}
   frontend:
@@ -56,6 +56,8 @@ services:
       timeout: 5s
       retries: 3
 networks:
+  warp_egress:
+    driver: bridge
   quiet:
     name: quiet-tunnel
     driver: bridge

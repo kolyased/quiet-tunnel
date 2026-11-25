@@ -11,13 +11,14 @@ APP_ENV=production
 APP_URL=https://quiet-tunnel.duckdns.org
 APP_MODE=disabled
 VPN_PROVIDER=cloudflare
+WARP_EXPERIMENTAL_ENABLED=false
 AUTH_PASSWORD_HASH=<output from scripts/hash_password.py>
 AUTH_SESSION_SECRET=<random value from openssl rand -hex 32>
 ALLOWED_ORIGINS=https://quiet-tunnel.duckdns.org
 LOG_LEVEL=INFO
 ```
 
-Cloudflare is a no-network template, so the production mode is intentionally disabled. Until a real adapter is added and approved, do not set `APP_MODE=personal` or mock. Restrict the environment file with `chmod 600 .env`; keep it out of Git. Restart backend and frontend after auth changes. Rotating `AUTH_SESSION_SECRET` invalidates existing sessions.
+The branch contains an experimental Cloudflare consumer API adapter, but its use is not documented or confirmed as permitted by Cloudflare. Keep `APP_MODE=disabled` and `WARP_EXPERIMENTAL_ENABLED=false`; do not enable it for the live site until written provider approval or supported API documentation covers this exact flow. Restrict the environment file with `chmod 600 .env`; keep it out of Git. Restart backend and frontend after auth changes. Rotating `AUTH_SESSION_SECRET` invalidates existing sessions.
 
 ## Operations
 

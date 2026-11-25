@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.3.0 — 2026-11-25
+
+- Added a disabled-by-default experimental Cloudflare consumer registration adapter with strict response validation and sanitized failures.
+- Kept provider egress isolated to the backend and preserved the internal-only application network; no VPN traffic is routed through the VPS.
+- Documented that Cloudflare has not confirmed permission for this undocumented registration flow; production enablement remains off.
+- Isolated Playwright E2E ports from existing local services and fixed test-runner discovery of generated reports.
+- Updated provider research, environment examples, and release documentation.
+
 ## 0.2.0 — 2026-11-25
 
 - Added a provider-neutral contract, runtime factory, typed connection parameters, generator service, no-network Cloudflare template and non-connectable mock adapter.

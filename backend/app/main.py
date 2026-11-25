@@ -21,7 +21,7 @@ from .providers.factory import create_provider
 from .providers.models import GenerationResponse, RegistrationRequest
 from .services.generator import generate_configuration
 
-app = FastAPI(title="Quiet Tunnel API", version="0.2.0", docs_url=None, redoc_url=None)
+app = FastAPI(title="Quiet Tunnel API", version="0.3.0", docs_url=None, redoc_url=None)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.allowed_origins.split(","),

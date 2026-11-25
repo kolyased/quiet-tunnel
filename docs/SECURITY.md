@@ -6,7 +6,7 @@
 - Generation API endpoints require an authenticated cookie, allowed Origin, strict request schema, bounded body, provider timeout and concurrency limit. API validation errors do not echo rejected input.
 - Browser-generated private keys are not in API schemas. Provider adapters receive only the public key; the browser forms the final config and QR in memory. Runtime memory is not guaranteed to be physically zeroized.
 - Provider adapters must use TLS verification, fixed provider destinations and bounded timeouts. Never log response bodies, provider credentials, tokens, public/private keys, or completed profiles. No provider secrets are currently configured.
-- Mock output uses reserved test endpoints and cannot establish a VPN. Cloudflare adapter performs no network requests. Production generation is disabled.
+- Mock output uses reserved test endpoints and cannot establish a VPN. The experimental Cloudflare adapter makes registration requests to an undocumented consumer API when explicitly enabled; it is disabled by default and must remain disabled in production until provider permission is confirmed. It does not log provider responses or registration tokens.
 - Nginx/Caddy security headers, `robots.txt`, and noindex metadata reduce exposure; authentication remains the access control. Public source alone does not prove the deployed JavaScript corresponds to reviewed code.
 
 Create a password hash with `python3 scripts/hash_password.py`; store it and the session secret only in the private environment file. Rotate the hash to change the password; rotate the session secret to revoke sessions. Report vulnerabilities privately to the repository owner. Do not include passwords, keys, provider responses, or `.conf` files in issues.

@@ -11,6 +11,7 @@ class Settings(BaseSettings):
     app_url: str = "http://localhost:3000"
     app_mode: Literal["mock", "personal", "disabled"] = "disabled"
     vpn_provider: Literal["mock", "cloudflare"] = "mock"
+    warp_experimental_enabled: bool = False
     auth_password_hash: str = ""
     auth_session_secret: str = ""
     auth_session_hours: int = Field(default=12, ge=1, le=168)

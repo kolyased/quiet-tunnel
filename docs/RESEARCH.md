@@ -1,6 +1,6 @@
 # Cloudflare WARP research
 
-Reviewed 25 November 2026 for a single-owner personal tool. The referenced repositories were examined as text source only; no third-party scripts/binaries were run. No API call was made.
+Reviewed 25 November 2026 for a single-owner personal tool. The referenced repositories were examined as text source only; no third-party scripts/binaries were run and no registration request was made during this review.
 
 ## What the code shows
 
@@ -28,22 +28,31 @@ Cloudflare's official [WARP docs](https://developers.cloudflare.com/warp-client/
 
 The [Cloudflare Application Terms](https://www.cloudflare.com/application/terms/) dated 18 October 2024 grant a personal, revocable, non-transferable license for use on a device the user owns or controls (section 2); they say not to modify, decompile, reverse engineer, or create derivative works of the Application (section 2); reserve the ability to impose service limits or block use (section 5); and prohibit interfering with, disrupting, altering, modifying, or creating an undue burden on the Application/services (section 6). The [Website and Online Services Terms](https://www.cloudflare.com/policies/terms/) dated 1 August 2025 apply to the named public services; section 7 bars circumventing API limits and obtaining information by means not intentionally made available. The terms do not specifically name `wgcf`, a one-owner profile-export tool, or this exact consumer registration flow.
 
-So the specific third-party one-owner integration is **not expressly permitted in the reviewed docs and not unambiguously called out as prohibited by name**. The protocol is undocumented, and current `wgcf`'s Android fingerprint matching appears intended to make a non-official client look like the official app. That crosses the requested boundary against bypassing provider restrictions. Quiet Tunnel therefore will not automate consumer registrations or impersonate the first-party client. This is a conservative product decision under ambiguous authorization, not a legal opinion or a claim of technical impossibility.
+So the specific third-party one-owner integration is **not expressly permitted in the reviewed docs and not unambiguously called out as prohibited by name**. The protocol is undocumented, and current `wgcf`'s Android fingerprint matching appears intended to make a non-official client look like the official app. Quiet Tunnel does not reproduce that fingerprint. The branch's plain HTTP client is technically simpler, but public documentation does not establish that Cloudflare intentionally makes this registration API available to third-party clients. This is a conservative product decision under ambiguous authorization, not a legal opinion or a claim of technical impossibility.
 
 Cloudflare One managed-device registration documents apply to enrolled organizational clients and service-token workflows; they do not authorize consumer WARP profile export. This would be a different product and would still use Cloudflare's official client, not give a generic consumer WireGuard profile.
 
-## Current provider implementation
+## Current provider implementation and permission assessment
 
-The application now follows a provider-neutral generation architecture. The browser creates a keypair, sends only the public key, and assembles a profile locally from a typed provider response. The mock adapter exercises this entire flow with reserved test ranges. The Cloudflare adapter is a no-network template that reports unavailable. There is no profile-import editor.
+The experiment adds an adapter for Cloudflare's undocumented consumer registration flow: it POSTs a public key to `api.cloudflareclient.com`, receives registration credentials, PATCHes the registration to enable WARP, and maps returned peer parameters into a WireGuard profile. It does not send the private key, imitate a Cloudflare client fingerprint, disable TLS checks, follow redirects, retry registration, or log response bodies/tokens. The owner reports that this flow produced a configuration and a working tunnel; this repository audit did not repeat that real registration or tunnel test.
 
-`APP_MODE=mock` is for local development and E2E only. Production uses `APP_MODE=disabled`. `APP_MODE=personal` does not make Cloudflare available by itself: the selected provider's runtime response is authoritative, and this Cloudflare template stays unavailable. The architecture intentionally does not issue new Cloudflare consumer WARP registrations until an integration is both supported and permissible without imitating or bypassing first-party restrictions.
+The adapter is an unsupported consumer flow, not the documented Cloudflare API. The official Cloudflare API docs currently document Zero Trust registration management operations such as list/get/delete, and describe WARP registrations as account/device records; they do not document this consumer POST/PATCH creation flow. This is a distinction between a technically functional endpoint and a provider-supported API.
 
-For a real standalone `.conf`, choose a provider that offers documented user-exportable WireGuard configurations or a supported API for managing a personal account. The provider must permit this use, allow the account's device/configuration limits, and provide the actual server-side peer parameters. Importing the provider's own configuration into an app is distinct from Quiet Tunnel creating a new provider registration.
+The current [Application Terms](https://www.cloudflare.com/application/terms/) (last updated 18 October 2024) license the Application for personal use on a device the user owns/controls (§2), prohibit modifying, decompiling, reverse engineering, or making derivative works of the Application (§2), and prohibit disrupting/altering the Application or creating an undue burden (§6). The current [Website and Online Services Terms](https://www.cloudflare.com/policies/terms/) prohibit exceeding/circumventing API limitations and obtaining information by means not intentionally made available (§7). The adapter does not patch or impersonate the official application, but Cloudflare's public docs do not say the consumer registration endpoint is intended for independent clients or third-party registration automation. The official docs therefore do not establish permission for this exact operation. Personal single-owner use is not expressly named as prohibited in those documents either.
+
+**Conclusion:** technical feasibility is demonstrated by the owner's reported successful tunnel, but permission for this undocumented consumer API is **unconfirmed**. We must not enable it in production on the evidence currently available. A user checkbox accepting the Application Terms does not grant permission to automate an undocumented API. Enablement requires written confirmation from Cloudflare, or a documented supported API that covers this exact use. This is a conservative deployment decision, not a legal opinion or a claim of technical impossibility.
+
+The supported Cloudflare alternative is to use the official client and documented enrollment/MDM workflows for Cloudflare One. The official registration-management API is account scoped; it does not, in the reviewed docs, offer consumer WARP profile creation and export.
+
+`APP_MODE=mock` is for local development and E2E only. Production uses `APP_MODE=disabled` and `WARP_EXPERIMENTAL_ENABLED=false`. `APP_MODE=personal` alone does not activate the adapter. The Cloudflare code remains explicitly experimental and the runtime flag defaults off.
+
+For a supported standalone `.conf`, use a provider that offers documented user-exportable WireGuard configurations or a supported API for managing a personal account. The provider must permit this use, allow the account's device/configuration limits, and provide the actual server-side peer parameters.
 
 ## Status / limits
 
-- Production `APP_MODE=disabled`; mock is only for local tests and is explicitly fictional. The personal Cloudflare adapter remains unavailable and performs no request.
-- No real WARP registration, profile, client import, or VPN connection was tested. No real provider response/error exists to report.
+- Production `APP_MODE=disabled`; `WARP_EXPERIMENTAL_ENABLED=false`. Mock is only for local tests and is explicitly fictional.
+- The owner reports a successful real registration/config/tunnel test on the experimental branch. This audit made no Cloudflare API request and did not independently verify that result.
+- Production activation is blocked until provider permission is confirmed. No new provider response/error was obtained during this review.
 - Private key generation is browser-local; generation APIs never accept a private key or config.
 - Personal owner authentication protects the site and registration endpoint. It does not change Cloudflare's API permission status.
 
@@ -59,5 +68,6 @@ For a real standalone `.conf`, choose a provider that offers documented user-exp
 - [Cloudflare Application Terms](https://www.cloudflare.com/application/terms/)
 - [Cloudflare Website and Online Services Terms](https://www.cloudflare.com/policies/terms/)
 - [Cloudflare One client managed-device registration](https://developers.cloudflare.com/cloudflare-one/team-and-resources/devices/cloudflare-one-client/deployment/mdm-deployment/)
+- [Cloudflare API: WARP device registrations](https://developers.cloudflare.com/api/resources/zero_trust/subresources/devices/subresources/registrations/)
 - [WireGuard](https://www.wireguard.com/)
 - [AmneziaWG documentation](https://docs.amnezia.org/ru/documentation/amnezia-wg/)

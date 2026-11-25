@@ -15,9 +15,9 @@ test("owner can generate and clear a mock profile without sending a private key"
   await page.getByRole("button", { name: /Создать конфигурацию/ }).click();
   const request = await generationRequest;
   const body = request.postDataJSON() as Record<string, unknown>;
-  expect(body).toEqual({ public_key: expect.any(String), format: "wireguard", platform: "android" });
+  expect(body).toEqual({ public_key: expect.any(String), format: "wireguard", platform: "android", terms_accepted: true });
   expect(JSON.stringify(body)).not.toContain("private_key");
-  await expect(page.getByRole("heading", { name: "Quiet Tunnel" })).toBeVisible();
+  await expect(page.locator("section.result")).toBeVisible();
   await expect(page.getByText(/Mock выдаёт фиктивные параметры/).last()).toBeVisible();
 
   const downloadWait = page.waitForEvent("download");

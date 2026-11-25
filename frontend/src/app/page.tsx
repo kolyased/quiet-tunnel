@@ -60,7 +60,7 @@ export default function Home() {
   const canGenerate = capabilities?.available === true && capabilities.formats.includes(format);
 
   async function generate() {
-    if (!canGenerate || busy || (capabilities?.mode === "mock" && !accepted)) return;
+    if (!canGenerate || busy || !accepted) return;
     setBusy(true);
     setError("");
     setResult("");
@@ -73,7 +73,7 @@ export default function Home() {
       const response = await fetch("/api/v1/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ public_key: encodePublicKey(pair.publicKey), format, platform: platform.toLowerCase() }),
+        body: JSON.stringify({ public_key: encodePublicKey(pair.publicKey), format, platform: platform.toLowerCase(), terms_accepted: accepted }),
         cache: "no-store",
       });
       const payload = await response.json() as Generated | { detail?: { message?: string } };
@@ -148,7 +148,7 @@ export default function Home() {
       <div className="tools"><button className="icon-button" onClick={() => setLang(lang === "ru" ? "en" : "ru")} aria-label={t.language}><Globe2 size={17}/><span>{lang.toUpperCase()}</span></button><button className="icon-button" onClick={() => setDark(!dark)} aria-label={t.theme}>{dark ? <Sun size={18}/> : <Moon size={18}/>}</button><button className="icon-button" onClick={logout} aria-label={t.logout}><LogOut size={17}/></button></div>
     </header>
     <div className="wrap content">
-      <section className="hero"><div className="eyebrow"><span className="pulse"/> PERSONAL VPN TOOL <span className="version">v0.2.0</span></div><h1>{t.title}</h1><p>{t.intro}</p></section>
+      <section className="hero"><div className="eyebrow"><span className="pulse"/> PERSONAL VPN TOOL <span className="version">v0.3.0</span></div><h1>{t.title}</h1><p>{t.intro}</p></section>
       <div className={`notice ${mode === "mock" ? "" : "notice-muted"}`}><span className="notice-icon"><Shield size={19}/></span><div><strong>{t.status}: {mode?.toUpperCase() ?? "…"}</strong><p>{statusMessage}</p></div><span className="demo-pill">{capabilities?.provider ?? "—"}</span></div>
 
       <section className="generator" aria-labelledby="generator-title">
@@ -161,8 +161,8 @@ export default function Home() {
         <div className="field"><label htmlFor="profile-name">{t.name}</label><input id="profile-name" value={name} maxLength={48} onChange={(event) => setName(event.target.value)}/></div>
         <button className="advanced-toggle" onClick={() => setAdvanced(!advanced)} aria-expanded={advanced}>{t.advanced}<ChevronDown size={17} className={advanced ? "rotate" : ""}/></button>
         {advanced && <div className="advanced-fields"><label>{t.mtu}<input type="number" min={576} max={9000} value={mtu} onChange={(event) => setMtu(Math.min(9000, Math.max(576, Number(event.target.value))))}/></label><button onClick={() => { setName("Quiet Tunnel"); setMtu(1280); setFormat("wireguard"); setPlatform("Android"); setAccepted(false); }}>{t.reset}</button></div>}
-        {mode === "mock" && <label className="consent"><input type="checkbox" checked={accepted} onChange={(event) => setAccepted(event.target.checked)}/><span>{t.consent}</span></label>}
-        <button className="primary" disabled={!canGenerate || busy || (mode === "mock" && !accepted)} onClick={generate}><KeyRound size={18}/>{busy ? t.working : t.generate}</button>
+        {(mode === "mock" || mode === "personal") && <label className="consent"><input type="checkbox" checked={accepted} onChange={(event) => setAccepted(event.target.checked)}/><span>{mode === "mock" ? t.consent : <>{t.terms} (<a href="https://www.cloudflare.com/application/terms/" target="_blank" rel="noreferrer">{t.termsUrl}</a>)</>}</span></label>}
+        <button className="primary" disabled={!canGenerate || busy || !accepted} onClick={generate}><KeyRound size={18}/>{busy ? t.working : t.generate}</button>
         {error && <p className="auth-error" role="alert">{error}</p>}
         <p className="privacy-line"><LockKeyhole size={14}/>{t.privacy}</p>
       </section>
@@ -171,7 +171,7 @@ export default function Home() {
 
       <section className="benefits"><h2>{t.features}</h2><div className="benefit-grid"><div><LockKeyhole/><b>{t.localKey}</b></div><div><Code2/><b>{t.source}</b></div><div><Shield/><b>{t.soleOwner}</b></div></div></section>
       <section className="guide" id="instructions"><span className="step">03 — NEXT STEP</span><h2>{t.instructions}</h2><p>{t.guideText}</p><div className="guide-links"><a href="https://www.wireguard.com/install/" target="_blank" rel="noreferrer">WireGuard ↗</a><a href="https://docs.amnezia.org/ru/documentation/amnezia-wg/" target="_blank" rel="noreferrer">AmneziaWG ↗</a></div></section>
-      <footer><Link className="brand small" href="/"><span className="mark"><svg viewBox="0 0 40 40"><path d="M20 2.5 35 11v18L20 37.5 5 29V11L20 2.5Z"/><path d="M13 27V16.5a7 7 0 0 1 14 0V27M17 27v-8a3 3 0 0 1 6 0v8M20 24v7"/></svg></span><span>quiet tunnel</span></Link><span>{t.footer}</span><span>MIT · v0.2.0</span></footer>
+      <footer><Link className="brand small" href="/"><span className="mark"><svg viewBox="0 0 40 40"><path d="M20 2.5 35 11v18L20 37.5 5 29V11L20 2.5Z"/><path d="M13 27V16.5a7 7 0 0 1 14 0V27M17 27v-8a3 3 0 0 1 6 0v8M20 24v7"/></svg></span><span>quiet tunnel</span></Link><span>{t.footer}</span><span>MIT · v0.3.0</span></footer>
     </div>
   </main>;
 }

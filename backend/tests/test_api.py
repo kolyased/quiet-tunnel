@@ -14,6 +14,8 @@ SESSION_SECRET = "test-session-secret-value-at-least-32-bytes"
 def test_settings(monkeypatch):
     monkeypatch.setattr(main.settings, "app_mode", "mock")
     monkeypatch.setattr(main.settings, "vpn_provider", "mock")
+    monkeypatch.setattr(main.settings, "warp_experimental_enabled", False)
+    monkeypatch.setattr(main.settings, "allowed_origins", "http://localhost:3000,http://127.0.0.1:3000")
     monkeypatch.setattr(main.settings, "auth_password_hash", hash_password("secure-test-password"))
     monkeypatch.setattr(main.settings, "auth_session_secret", SESSION_SECRET)
     monkeypatch.setattr(main.settings, "app_env", "production")

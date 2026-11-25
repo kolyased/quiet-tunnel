@@ -9,7 +9,7 @@ This document describes how to add a supported provider without changing the fro
 Current adapters:
 
 - `MockVPNProvider`: deterministic test-only connection parameters with reserved documentation IPs. Never usable for real connectivity.
-- `CloudflareWarpProvider`: documented no-network template. It reports unavailable and raises `ProviderUnavailable`; do not activate it until a permitted and supported integration is implemented and reviewed.
+- `CloudflareWarpProvider`: experimental consumer registration adapter. It makes no request unless `WARP_EXPERIMENTAL_ENABLED=true`; the flag defaults to false. The endpoint is undocumented and permission for third-party automation is unconfirmed. Do not enable it in production until Cloudflare provides written authorization or documents this exact API use.
 - `disabled`: factory returns no provider and the API refuses generation.
 
 ## Provider contract
@@ -59,11 +59,12 @@ Settings live in `backend/app/core/config.py` and are supplied through environme
 
 - `APP_MODE=mock|personal|disabled`; controls allowed application workflow.
 - `VPN_PROVIDER=mock|cloudflare`; selects the adapter when a provider mode is active.
+- `WARP_EXPERIMENTAL_ENABLED=false`; separate kill switch for the unsupported Cloudflare consumer API adapter. Keep false in local and production configurations unless the provider permission check is resolved.
 - `PROVIDER_TIMEOUT_SECONDS`, `MAX_CONCURRENT_REGISTRATIONS`.
 - `RATE_LIMIT_REQUESTS`, `RATE_LIMIT_WINDOW_SECONDS`.
 - `ALLOWED_ORIGINS` and owner auth settings `AUTH_PASSWORD_HASH`, `AUTH_SESSION_SECRET`.
 
-Use `.env.example` for safe examples. Secrets belong only in the private runtime environment; never commit them. `personal` is not a promise that a real provider exists: the provider's actual availability is authoritative. In production, keep `APP_MODE=disabled` until enabling the adapter is justified and deliberately configured.
+Use `.env.example` for safe examples. Secrets belong only in the private runtime environment; never commit them. `personal` is not a promise that a real provider exists: the provider's actual availability is authoritative. In production, keep `APP_MODE=disabled` and the experimental flag false until support and permission are established.
 
 ## Errors and validation
 

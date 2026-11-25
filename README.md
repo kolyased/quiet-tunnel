@@ -1,6 +1,6 @@
 # Quiet Tunnel
 
-**Personal VPN Configuration Generator** for a single owner. The source repository is public; the deployed application is password protected.
+**Personal VPN Configuration Generator** for a single owner (v0.3.0). The source repository is public; the deployed application is password protected.
 
 **Site:** https://quiet-tunnel.duckdns.org
 
@@ -8,9 +8,9 @@ Quiet Tunnel is independent and is not a Cloudflare, WireGuard, or Amnezia produ
 
 ## Status
 
-The modular generation flow is implemented: the browser creates an X25519 key pair, sends only the public key to the backend, receives typed provider parameters, and assembles a WireGuard `.conf`, QR code, and downloadable file locally. The project includes a mock provider, a no-network Cloudflare adapter template, and a disabled mode.
+The modular generation flow is implemented: the browser creates an X25519 key pair, sends only the public key to the backend, receives typed provider parameters, and assembles a WireGuard `.conf`, QR code, and downloadable file locally. The project includes a non-production experimental Cloudflare consumer API adapter, a mock provider, and a disabled mode.
 
-Mock parameters use reserved test ranges and **cannot connect to a VPN**. The Cloudflare integration is not implemented and production generation is disabled. AmneziaWG output is disabled because no configured provider confirms support for the server-side obfuscation parameters it requires.
+Mock parameters use reserved test ranges and **cannot connect to a VPN**. The Cloudflare adapter targets an undocumented consumer endpoint. It is disabled by default, and production use is blocked pending Cloudflare confirmation that this registration flow is permitted. The owner reports a successful manual connection test; this repository's automated tests mock the API and do not independently verify a live tunnel. AmneziaWG output is disabled because the adapter returns standard WireGuard parameters only.
 
 ## Features
 
@@ -45,7 +45,7 @@ Run browser E2E with `npm run e2e` from `frontend/`; it starts the mock backend 
 
 The production deployment is in `/opt/quiet-tunnel`; existing Caddy/Nginx/Docker Compose routing is preserved. The VPS hosts the website and backend only. User VPN traffic is not routed through the VPS.
 
-Set `APP_MODE=disabled`, configure an owner password hash and session secret, and protect `.env` (`chmod 600 .env`). Do not expose the backend port publicly. Start with `docker compose up -d --build`.
+Set `APP_MODE=disabled` and `WARP_EXPERIMENTAL_ENABLED=false`, configure an owner password hash and session secret, and protect `.env` (`chmod 600 .env`). Do not expose the backend port publicly. Keep experimental generation disabled unless its use is authorized. Start with `docker compose up -d --build`.
 
 Manage the deployed project with `scripts/update.sh`, `scripts/status.sh`, `scripts/logs.sh`, and `scripts/rollback.sh`.
 
@@ -55,6 +55,6 @@ See [provider integration](docs/PROVIDER_INTEGRATION.md), [architecture](docs/AR
 
 The backend never receives the private key or complete profile. Users must trust the JavaScript served by the website; a public source repository alone does not prove the deployed bundle matches it. A QR code contains the private key. There is no profile database or analytics. Login and generation attempts are rate limited.
 
-No real provider registration, client import, tunnel establishment, or end-to-end VPN traffic has been tested. Mock generation tests only the application flow.
+No live provider registration, client import, tunnel establishment, or end-to-end VPN traffic is exercised by CI. Mock generation tests only the application flow. The owner separately reports that the local experimental integration generated a configuration and connected successfully; this has not been independently repeated during this audit.
 
 MIT licensed. See [LICENSE](LICENSE).
